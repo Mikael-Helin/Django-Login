@@ -9,7 +9,13 @@
 <body>
     <h1>Private Page</h1>
     <p>Welcome, {{ request.user.username }}</p>
-
+    {% if messages %}
+        <ul>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
     {% if profile.image %}
         <h2>Your Current Profile Image:</h2>
         <img src="{{ profile.image.url }}" alt="Your Profile Image" width="150"><br>

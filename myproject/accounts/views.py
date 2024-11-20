@@ -4,13 +4,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from .models import Profile
+from django.contrib import messages
+import os
 
 # Create your views here.
 
 # Landing/login page
 def login_view(request):
     if request.user.is_authenticated:
-        # Redirect logged-in users to the private page
+        messages.info(request, "You are already logged in.")
         return redirect('private')
 
     if request.method == 'POST':
@@ -82,8 +84,12 @@ def upload_image(request):
 @login_required
 def delete_image(request):
     if request.method == 'POST':
-        # Set the user's profile image to None
-        request.user.profile.image = None
-        request.user.profile.save()
+        profile = request.user.profile
+        if profile.image:
+            image_path = profile.image.path
+            if os.path.exists(image_path):
+                os.remove(image_path)
+            # Set the image field to None and save the profile
+            profile.image = None
+            profile.save()
         return redirect('private')
-    return redirect('private')
