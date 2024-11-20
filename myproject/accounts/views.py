@@ -3,11 +3,16 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import HttpResponse
+from .models import Profile
 
 # Create your views here.
 
 # Landing/login page
 def login_view(request):
+    if request.user.is_authenticated:
+        # Redirect logged-in users to the private page
+        return redirect('private')
+
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
@@ -17,16 +22,32 @@ def login_view(request):
             return redirect('private')
         else:
             return render(request, 'accounts/login.html', {'error': 'Invalid credentials'})
+
     return render(request, 'accounts/login.html')
+
 
 # Public page
 def public_page(request):
-    return render(request, 'accounts/public.html')
+    profiles = Profile.objects.all()  # Get all user profiles
+    return render(request, 'accounts/public.html', {'profiles': profiles})
 
-# Private page (restricted to logged-in users)
 @login_required
 def private_page(request):
-    return render(request, 'accounts/private.html')
+    profile = request.user.profile
+
+    if request.method == 'POST':
+        if 'upload_image' in request.POST and request.FILES.get('image'):
+            # Replace the current image with the uploaded one
+            profile.image = request.FILES['image']
+            profile.save()
+        elif 'delete_image' in request.POST:
+            # Delete the current image
+            profile.image = None
+            profile.save()
+        return redirect('private')  # Reload the private page after upload or delete
+
+    return render(request, 'accounts/private.html', {'profile': profile})
+
 
 # User registration/profile creation
 def register(request):
@@ -45,3 +66,24 @@ def register(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+
+# Image upload
+@login_required
+def upload_image(request):
+    if request.method == 'POST' and request.FILES.get('image'):
+        image = request.FILES['image']
+        request.user.profile.image = image
+        request.user.profile.save()
+        return redirect('private')
+    return redirect('private')
+
+# Image deletion
+@login_required
+def delete_image(request):
+    if request.method == 'POST':
+        # Set the user's profile image to None
+        request.user.profile.image = None
+        request.user.profile.save()
+        return redirect('private')
+    return redirect('private')
